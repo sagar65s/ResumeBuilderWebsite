@@ -1,12 +1,12 @@
 {
-  "name": "rest-express",
+  "name": "resume-builder-website",
   "version": "1.0.0",
-  "type": "module",
-  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
   "scripts": {
     "dev": "npx tsx watch server/index.ts",
-    "build": "vite build && tsc",
-    "start": "node dist/index.cjs",
+    "build": "tsc -p tsconfig.server.json",
+    "start": "node dist/server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },
@@ -124,3 +124,5 @@
     "bufferutil": "^4.0.8"
   }
 }
+
+
