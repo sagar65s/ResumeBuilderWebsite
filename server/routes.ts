@@ -20,14 +20,21 @@ export async function registerRoutes(
 
 
 
-// HEALTH CHECK ROUTE (Render keep-alive)
+  // HEALTH CHECK ROUTE (Render keep-alive)
   app.get("/health", (req, res) => {
     res.status(200).send("OK");
   });
 
   app.get("/sitemap.xml", (req, res) => {
-  res.sendFile(__dirname + "/server/sitemap.xml");
-});
+    res.header("Content-Type", "application/xml");
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://resumecreation.onrender.com/</loc>
+    <priority>1.0</priority>
+  </url>
+</urlset>`);
+  });
 
 
 
@@ -56,11 +63,11 @@ export async function registerRoutes(
       const resume = await storage.createResume({ ...input, userId: user.id });
       res.status(201).json(resume);
     } catch (err) {
-       if (err instanceof z.ZodError) {
-          res.status(400).json({ message: err.errors[0].message });
-       } else {
-          res.sendStatus(500);
-       }
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.sendStatus(500);
+      }
     }
   });
 
@@ -73,15 +80,15 @@ export async function registerRoutes(
     if (existing.userId !== user.id) return res.sendStatus(403);
 
     try {
-        const input = api.resumes.update.input.parse(req.body);
-        const updated = await storage.updateResume(id, input);
-        res.json(updated);
+      const input = api.resumes.update.input.parse(req.body);
+      const updated = await storage.updateResume(id, input);
+      res.json(updated);
     } catch (err) {
-        if (err instanceof z.ZodError) {
-            res.status(400).json({ message: err.errors[0].message });
-         } else {
-            res.sendStatus(500);
-         }
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.sendStatus(500);
+      }
     }
   });
 
@@ -116,19 +123,19 @@ export async function registerRoutes(
 
   // AI Generation Route
   // AI Generation Route
-app.post(api.ai.generateResume.path, async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
+  app.post(api.ai.generateResume.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
 
-  try {
-    const {
-      jobRole,
-      experienceLevel,
-      skills,
-      currentEducation,
-      projectsContext,
-    } = api.ai.generateResume.input.parse(req.body);
+    try {
+      const {
+        jobRole,
+        experienceLevel,
+        skills,
+        currentEducation,
+        projectsContext,
+      } = api.ai.generateResume.input.parse(req.body);
 
-    const systemPrompt = `
+      const systemPrompt = `
 You are an expert resume writer.
 Return ONLY valid JSON. No markdown. No explanation.
 
@@ -142,7 +149,7 @@ JSON schema:
 }
 `;
 
-    const userPrompt = `
+      const userPrompt = `
 Job Role: ${jobRole}
 Experience Level: ${experienceLevel}
 Skills: ${skills || "Relevant skills"}
@@ -150,78 +157,78 @@ Education: ${currentEducation || "Relevant education"}
 Projects: ${projectsContext || "Relevant projects"}
 `;
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      temperature: 0.3,
-      max_tokens: 900,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
+      const completion = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        temperature: 0.3,
+        max_tokens: 900,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
 
-    const raw = completion.choices[0]?.message?.content || "{}";
-    const json = JSON.parse(raw);
+      const raw = completion.choices[0]?.message?.content || "{}";
+      const json = JSON.parse(raw);
 
-    res.json(json);
-  } catch (err) {
-    console.error("Groq Resume AI Error:", err);
-    res.status(500).json({ message: "Failed to generate resume" });
-  }
-});
+      res.json(json);
+    } catch (err) {
+      console.error("Groq Resume AI Error:", err);
+      res.status(500).json({ message: "Failed to generate resume" });
+    }
+  });
 
 
   // Seed Data
   if (process.env.NODE_ENV !== "production") {
     const existingUser = await storage.getUserByUsername("demo");
     if (!existingUser) {
-        const hashedPassword = await bcrypt.hash("demo123", 10);
-        const user = await storage.createUser({
-            username: "demo",
-            password: hashedPassword,
-            name: "Demo User"
-        });
-        await storage.createResume({
-            userId: user.id,
-            title: "Sample Resume",
-            content: {
-                personalInfo: {
-                    fullName: "Demo User",
-                    email: "demo@example.com",
-                    phone: "+1 234 567 8900",
-                    bio: "Experienced Software Engineer with a passion for building scalable applications.",
-                    location: "San Francisco, CA"
-                },
-                experience: [
-                    {
-                        role: "Senior Developer",
-                        company: "Tech Corp",
-                        startDate: "2020-01",
-                        endDate: "Present",
-                        description: "• Led a team of 5 developers.\n• Architected microservices.",
-                        current: true
-                    }
-                ],
-                education: [
-                    {
-                        degree: "BS Computer Science",
-                        school: "University of Tech",
-                        startDate: "2015-09",
-                        endDate: "2019-05"
-                    }
-                ],
-                skills: ["React", "Node.js", "TypeScript", "PostgreSQL"],
-                projects: [
-                    {
-                        name: "Resume Builder",
-                        description: "An AI-powered resume builder app.",
-                        link: "https://example.com"
-                    }
-                ]
-            },
-            isAiGenerated: false
-        });
-        console.log("Seeded demo user and resume");
+      const hashedPassword = await bcrypt.hash("demo123", 10);
+      const user = await storage.createUser({
+        username: "demo",
+        password: hashedPassword,
+        name: "Demo User"
+      });
+      await storage.createResume({
+        userId: user.id,
+        title: "Sample Resume",
+        content: {
+          personalInfo: {
+            fullName: "Demo User",
+            email: "demo@example.com",
+            phone: "+1 234 567 8900",
+            bio: "Experienced Software Engineer with a passion for building scalable applications.",
+            location: "San Francisco, CA"
+          },
+          experience: [
+            {
+              role: "Senior Developer",
+              company: "Tech Corp",
+              startDate: "2020-01",
+              endDate: "Present",
+              description: "• Led a team of 5 developers.\n• Architected microservices.",
+              current: true
+            }
+          ],
+          education: [
+            {
+              degree: "BS Computer Science",
+              school: "University of Tech",
+              startDate: "2015-09",
+              endDate: "2019-05"
+            }
+          ],
+          skills: ["React", "Node.js", "TypeScript", "PostgreSQL"],
+          projects: [
+            {
+              name: "Resume Builder",
+              description: "An AI-powered resume builder app.",
+              link: "https://example.com"
+            }
+          ]
+        },
+        isAiGenerated: false
+      });
+      console.log("Seeded demo user and resume");
     }
   }
 
