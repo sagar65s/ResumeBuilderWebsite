@@ -18,10 +18,17 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupAuth(app);
 
+
+
 // HEALTH CHECK ROUTE (Render keep-alive)
   app.get("/health", (req, res) => {
     res.status(200).send("OK");
   });
+
+  app.get("/sitemap.xml", (req, res) => {
+  res.sendFile(__dirname + "/sitemap.xml");
+});
+
 
 
   // Resume Routes
